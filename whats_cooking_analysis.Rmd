@@ -1,0 +1,77 @@
+---
+title: "What's cooking"
+author: "Silke Johannsen"
+date: '2019-03-01'
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    keep_md: yes
+subtitle: Predictive modelling excercise
+---
+
+The data set from the Kaggle competition What's cooking is stored in JSON format. 
+
+```{r global_Knitr_options, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+
+# Global knitr setting used in every chunk #
+
+knitr::opts_chunk$set(cache= FALSE, # Turn cache=TRUE if knitting the document is too slow
+                      results='asis',
+                      warning=FALSE,
+                      message=FALSE,
+                      echo=FALSE,
+                      dpi=96,
+                      fig.width=10,
+                      fig.height=10, 
+                      # Default figure widths
+                      dev="png",
+                    #dev.args=list(type="cairo"), # The png device
+                      # Change to dev="postscript" if you want the EPS-files
+                      # for submitting. Also remove the dev.args() as the postscript
+                      # doesn't accept the type="cairo" argument.
+                      error=FALSE)
+ 
+# Evaluate the figure caption after the plot
+knitr::opts_knit$set(eval.after='fig.cap')
+
+# NA's are rendered blank when printing a table
+options(knitr.kable.NA = '')
+
+```
+
+
+```{r set_up}
+
+library(tidyverse)
+library(here)
+library(jsonlite)
+
+```
+
+Loading the train and test data with the jsonlite package and inspecting the objects.
+
+The train data have three columns named id, cuisine and ingredients with the ingredients colum being a list.
+
+The test data have two columns, id and ingredients. Again as a list.
+
+```{r read_data}
+
+## read data
+
+train_raw_df <- 
+  read_json(here("data", "train.json"),
+            simplifyVector = TRUE)
+test_raw_df <- 
+  read_json(here("data", "test.json"),
+            simplifyVector = TRUE)
+
+## inspecting the objects
+head(train_raw_df)
+head(test_raw_df)
+
+```
+
+
+
+
