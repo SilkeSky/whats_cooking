@@ -1,22 +1,21 @@
 ---
 title: "What's cooking"
+subtitle: "Predictive modelling excercise"
 author: "Silke Johannsen"
 date: '2019-03-01'
 output:
   html_document:
-    df_print: paged
-  html_notebook:
     keep_md: yes
-subtitle: Predictive modelling excercise
+    toc: yes
 ---
 
-The data set from the Kaggle competition What's cooking is stored in JSON format. 
 
 ```{r global_Knitr_options, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
 
-# Global knitr setting used in every chunk #
+## Global knitr setting used in every chunk
 
-knitr::opts_chunk$set(cache= FALSE, # Turn cache=TRUE if knitting the document is too slow
+knitr::opts_chunk$set(cache= FALSE, 
+                      # Turn cache=TRUE if knitting the document is too slow
                       results='asis',
                       warning=FALSE,
                       message=FALSE,
@@ -26,35 +25,56 @@ knitr::opts_chunk$set(cache= FALSE, # Turn cache=TRUE if knitting the document i
                       fig.height=10, 
                       # Default figure widths
                       dev="png",
-                    #dev.args=list(type="cairo"), # The png device
+                      # dev.args=list(type="cairo"), # The png device
                       # Change to dev="postscript" if you want the EPS-files
-                      # for submitting. Also remove the dev.args() as the postscript
+                      # for submitting. Also remove the dev.args() 
+                      # as the postscript
                       # doesn't accept the type="cairo" argument.
                       error=FALSE)
  
 # Evaluate the figure caption after the plot
 knitr::opts_knit$set(eval.after='fig.cap')
 
-# NA's are rendered blank when printing a table
+## NA's are rendered blank when printing a table
 options(knitr.kable.NA = '')
+
+## printed numbers rounded with big marks
+knitr::knit_hooks$set(inline = function(x) {
+  if (!is.numeric(x)) {
+    x
+  } else {
+    prettyNum(round(x, 2), big.mark = ",")
+  }
+})
 
 ```
 
+```{r versions}
+
+info <- sessionInfo()
+r_ver <- paste(info$R.version$major, info$R.version$minor, sep=".")
+r_year <- info$R.version$year
+
+```
+
+## R information  
+All analyses were performed using R (ver. `r r_ver`) [R Core Team, `r r_year`].
 
 ```{r set_up}
 
 library(tidyverse)
 library(here)
 library(jsonlite)
+library(kableExtra)
+library(skimr)
 
 ```
 
-Loading the train and test data with the jsonlite package and inspecting the objects.
+## Load & inspect the data
 
-The train data have three columns named id, cuisine and ingredients with the ingredients colum being a list.
+The data set from the Kaggle competition, What's cooking is stored in JSON format. Load the train and test data with the jsonlite package and inspect the objects.
 
-The test data have two columns, id and ingredients. Again as a list.
-
+<br>
 ```{r read_data}
 
 ## read data
@@ -62,16 +82,111 @@ The test data have two columns, id and ingredients. Again as a list.
 train_raw_df <- 
   read_json(here("data", "train.json"),
             simplifyVector = TRUE)
+
 test_raw_df <- 
   read_json(here("data", "test.json"),
             simplifyVector = TRUE)
 
-## inspecting the objects
-head(train_raw_df)
-head(test_raw_df)
-
 ```
 
 
+```{r inspec_data}
 
+## inspecting the objects
+
+head(train_raw_df) %>% 
+  knitr::kable(caption = "Train data frame:") %>% 
+  kable_styling()
+
+head(test_raw_df) %>% 
+  knitr::kable(caption = "Test data frame:") %>% 
+  kable_styling()
+
+## ckecking id and cuisine
+
+train_no_id <- train_raw_df %>% 
+  distinct(id) %>% 
+  tally() %>% 
+  pull()
+
+train_no_cuisine <- train_raw_df %>% 
+  distinct(cuisine) %>% 
+  tally() %>% 
+  pull()
+
+test_no_id <- test_raw_df %>%
+  distinct(id) %>% 
+  tally() %>% 
+  pull()
+
+
+## are id's in test data set found in the train data set
+
+test_id_vector <- test_raw_df %>% 
+  distinct(id) %>% 
+  pull()
+
+test_id_in_train <- train_raw_df %>% 
+  filter(id %in% test_id_vector)
+
+rm(test_id_vector)
+
+```
+<br>
+
+The train data have three columns named id, cuisine and ingredients, with the ingredients column being a list. The variable id has no duplicates and `r train_no_id` unique entries. There are `r train_no_cuisine` distinct cuisine entries.
+
+The test data have two columns, id and ingredients. Ingredients again as a list. The variable id has no duplicates and `r test_no_id` unique entries. None of the id's in the test data set are present in the train data set.
+
+Using unnest from the tidyr package to extract the ingredients list into a more user friendly format.
+
+<br>
+```{r flatten_df}
+
+train_flat <- train_raw_df %>%
+  unnest(ingredients) 
+
+head(train_flat) %>% 
+  knitr::kable(caption = "Train data frame flat:", align = "ccc") %>% 
+  kable_styling()
+
+test_flat <- test_raw_df %>%
+  unnest(ingredients)
+
+head(test_flat) %>% 
+  knitr::kable(caption = "Test data frame flat:", align = "ccc") %>% 
+  kable_styling()
+
+```
+<br>
+
+It is now easy to do some simple summary analysis on the data using the dplyr & skimr package.
+
+<br>
+```{r}
+
+train_flat %>% 
+  mutate_all(funs(as.factor(.))) %>% 
+  skim_to_wide() %>%
+  knitr::kable(caption = " Train data: Summary statistics") %>% 
+  kable_styling()
+
+train_flat %>% 
+  group_by(ingredients) %>% 
+  tally() %>% 
+  top_n(10, n) %>% 
+  arrange(desc(n)) %>% 
+  knitr::kable(caption = "Train data: Top 10 Ingredients") %>% 
+  kable_styling()
+
+
+test_flat %>% 
+  group_by(ingredients) %>% 
+  tally() %>% 
+  top_n(10, n) %>% 
+  arrange(desc(n)) %>% 
+  knitr::kable(caption = "Test data: Top 10 Ingredients") %>% 
+  kable_styling()
+
+```
 
